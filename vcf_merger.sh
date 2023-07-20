@@ -59,7 +59,7 @@ tabix -p vcf ${file2%.vcf}_reheader_sorted.vcf.gz || { echo "Failed to index com
 bcftools merge ${file1%.vcf}_reheader_sorted.vcf.gz ${file2%.vcf}_reheader_sorted.vcf.gz -Ov -o merged_file.vcf || { echo "Failed to merge VCF files"; exit 1; }
 
 # Remove the temporary files
-rm ${file1%.vcf}_reheader.vcf ${file2%.vcf}_reheader.vcf ${file1%.vcf}_reheader_sorted.vcf ${file2%.vcf}_reheader_sorted.vcf || { echo "Failed to remove temporary files"; exit 1; }
+rm ${file1%.vcf}_reheader.vcf ${file2%.vcf}_reheader.vcf ${file1%.vcf}_reheader_sorted.vcf ${file2%.vcf}_reheader_sorted.vcf ${file1%.vcf}_reheader_sorted.vcf.gz ${file2%.vcf}_reheader_sorted.vcf.gz ${file1%.vcf}_reheader_sorted.vcf.gz.tbi ${file2%.vcf}_reheader_sorted.vcf.gz.tbi || { echo "Failed to remove temporary files"; exit 1; }
 
 # Count the number of individuals in each file
 num_individuals_file1=$(bcftools query -l $file1 | wc -l) || { echo "Failed to count individuals in VCF file 1"; exit 1; }

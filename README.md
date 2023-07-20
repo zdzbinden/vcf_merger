@@ -38,6 +38,38 @@ Replace `file1.vcf`, `file2.vcf`, and `file.fai` with the names of your actual f
 
 The script outputs a merged VCF file named `merged_file.vcf`.
 
+Here's a brief guide on how to use the script:
+
+1. **Clone the repository from GitHub to your local machine.** This can be done using the `git clone` command followed by the URL of the repository. For example:
+
+    ```
+    git clone https://github.com/zdzbinden/vcf_merger
+    ```
+
+This command will create a new directory in your current location with the same name as the repository. This directory will contain all the files from the repository.
+
+2. **Navigate to the directory containing the script.** Use the `cd` command to change directories. For example:
+
+    ```
+    cd vcf_merger
+    ```
+
+3. **Make the script executable.** This can be done using the `chmod` command followed by `u+x` and the name of the script. For example:
+
+    ```
+    chmod u+x vcf_merger.sh
+    ```
+
+4. **Run the script.** This can be done using the `./` prefix followed by the name of the script and any necessary arguments. For example:
+
+    ```
+    ./vcf_merger.sh file1.vcf file2.vcf file.fai
+    ```
+
+    Replace `file1.vcf`, `file2.vcf`, and `file.fai` with the actual names of your input files (if they are in the same directory as vef_merger.sh) or the paths to those files. This command runs the script with the specified input files.
+
+Remember to replace the placeholders in the commands with your actual file names or paths. If you encounter any errors, make sure that your input files are in the correct format and that you have the necessary permissions to read and write in the directory.
+
 ## Error Checking
 
 The script checks for errors at each step and stops if any command fails. It reports an error message indicating what went wrong. It also checks that the required programs are installed before running.
@@ -47,5 +79,3 @@ At the end of the script, it checks that the number of individuals in the merged
 ## Temporary Files
 
 The script creates several temporary files during its execution. These files are removed as soon as they are no longer needed. The original input files are not modified.
-
----

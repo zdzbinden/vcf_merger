@@ -79,3 +79,10 @@ At the end of the script, it checks that the number of individuals in the merged
 ## Temporary Files
 
 The script creates several temporary files during its execution. These files are removed as soon as they are no longer needed. The original input files are not modified.
+
+---
+### License
+
+This software is provided for free: you can redistribute it and/or modify it under the terms of the GNU Public License as published by the Free Software Foundation. You should have received a copy of the GNU Public License with the software. If not, see:  [www.gnu.org/licenses](http://www.gnu.org/licenses)
+
+The author claims no liability nor resposibility for the functionality of this software.

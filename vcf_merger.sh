@@ -4,6 +4,9 @@
 
 # Usage: ./script.sh file1.vcf file2.vcf file.fai
 
+# Get start time
+start=$(date +%s)
+
 # Check that the required programs are installed
 command -v bcftools >/dev/null 2>&1 || { echo -e "bcftools is not installed. Aborting.\n"; exit 1; }
 command -v bgzip >/dev/null 2>&1 || { echo -e "bgzip is not installed. Aborting.\n"; exit 1; }
@@ -62,37 +65,47 @@ echo -e "Headers of the VCF files replaced with the combined headers.\n"
 rm ${file1%.vcf}_filtered.vcf ${file2%.vcf}_filtered.vcf || { echo -e "Failed to remove filtered VCF files\n"; exit 1; }
 
 # Change the ID column information for the loci in each input VCF file to be a combination of the information in the CHROM column and the POS column
-bcftools annotate -Ov -I '%ID\_%CHROM\_%POS' ${file1%.vcf}_reheader.vcf > ${file1%.vcf}_annotated.vcf || { echo -e "Failed to annotate VCF file 1\n"; exit 1; }
-bcftools annotate -Ov -I '%ID\_%CHROM\_%POS' ${file2%.vcf}_reheader.vcf > ${file2%.vcf}_annotated.vcf || { echo -e "Failed to annotate VCF file 2\n"; exit 1; }
+bcftools annotate -Ov -I '%CHROM\_%POS' ${file1%.vcf}_reheader.vcf > ${file1%.vcf}_annotated.vcf || { echo -e "Failed to annotate VCF file 1\n"; exit 1; }
+bcftools annotate -Ov -I '%CHROM\_%POS' ${file2%.vcf}_reheader.vcf > ${file2%.vcf}_annotated.vcf || { echo -e "Failed to annotate VCF file 2\n"; exit 1; }
 
 echo -e "VCF file IDs annotated.\n"
 
 # Remove reheader VCF files after use
 rm ${file1%.vcf}_reheader.vcf ${file2%.vcf}_reheader.vcf || { echo -e "Failed to remove reheader VCF files\n"; exit 1; }
 
+# Normalize to combine multiple records created by multi-allelic loci
+bcftools norm -Ov -m+any ${file1%.vcf}_annotated.vcf -o ${file1%.vcf}_normed.vcf || { echo -e "Failed to normalize VCF file 1\n"; exit 1; }
+bcftools norm -Ov -m+any ${file2%.vcf}_annotated.vcf -o ${file2%.vcf}_normed.vcf|| { echo -e "Failed to normalize VCF file 2\n"; exit 1; }
+
+echo -e "Input files are normalized to remove duplicate records.\n"
+
 # Check for unique IDs in the VCF files
-num_ids_file1=$(awk '!/^#/ {print $3}' ${file1%.vcf}_annotated.vcf | sort | uniq | wc -l)
-num_rows_file1=$(awk '!/^#/ {print $3}' ${file1%.vcf}_annotated.vcf | wc -l)
+num_ids_file1=$(awk '!/^#/ {print $3}' ${file1%.vcf}_normed.vcf | sort | uniq | wc -l)
+num_rows_file1=$(awk '!/^#/ {print $3}' ${file1%.vcf}_normed.vcf | wc -l)
 if [ $num_ids_file1 -ne $num_rows_file1 ]; then
-    echo -e "Error: IDs in VCF file 1 are not unique\n"; exit 1;
+    echo -e "***************************************************"
+    echo -e "Warning: IDs in VCF file 1 are not unique";
+    echo -e "***************************************************"
 fi
 
-num_ids_file2=$(awk '!/^#/ {print $3}' ${file2%.vcf}_annotated.vcf | sort | uniq | wc -l)
-num_rows_file2=$(awk '!/^#/ {print $3}' ${file2%.vcf}_annotated.vcf | wc -l)
+num_ids_file2=$(awk '!/^#/ {print $3}' ${file2%.vcf}_normed.vcf | sort | uniq | wc -l)
+num_rows_file2=$(awk '!/^#/ {print $3}' ${file2%.vcf}_normed.vcf | wc -l)
 if [ $num_ids_file2 -ne $num_rows_file2 ]; then
-    echo -e "Error: IDs in VCF file 2 are not unique\n"; exit 1;
+    echo -e "***************************************************"
+    echo -e "Warning: IDs in VCF file 2 are not unique";
+    echo -e "***************************************************"
 fi
 
 echo -e "Checked for unique IDs in the VCF files.\n"
 
 # Sort the VCF files
-bcftools sort ${file1%.vcf}_annotated.vcf -Ov -o ${file1%.vcf}_annotated_sorted.vcf || { echo -e "Failed to sort VCF file 1\n"; exit 1; }
-bcftools sort ${file2%.vcf}_annotated.vcf -Ov -o ${file2%.vcf}_annotated_sorted.vcf || { echo -e "Failed to sort VCF file 2\n"; exit 1; }
+bcftools sort ${file1%.vcf}_normed.vcf -Ov -o ${file1%.vcf}_annotated_sorted.vcf || { echo -e "Failed to sort VCF file 1\n"; exit 1; }
+bcftools sort ${file2%.vcf}_normed.vcf -Ov -o ${file2%.vcf}_annotated_sorted.vcf || { echo -e "Failed to sort VCF file 2\n"; exit 1; }
 
 echo -e "VCF files sorted.\n"
 
 # Remove annotated VCF files after use
-rm ${file1%.vcf}_annotated.vcf ${file2%.vcf}_annotated.vcf || { echo -e "Failed to remove annotated VCF files\n"; exit 1; }
+rm ${file1%.vcf}_annotated.vcf ${file2%.vcf}_annotated.vcf ${file1%.vcf}_normed.vcf ${file2%.vcf}_normed.vcf || { echo -e "Failed to remove annotated VCF files\n"; exit 1; }
 
 # Compress and index the VCF files
 bgzip -c ${file1%.vcf}_annotated_sorted.vcf > ${file1%.vcf}_annotated_sorted.vcf.gz || { echo -e "Failed to compress sorted VCF file 1\n"; exit 1; }
@@ -106,7 +119,7 @@ echo -e "VCF files compressed and indexed.\n"
 rm ${file1%.vcf}_annotated_sorted.vcf ${file2%.vcf}_annotated_sorted.vcf || { echo -e "Failed to remove sorted VCF files\n"; exit 1; }
 
 # Merge the VCF files
-bcftools merge -m all ${file1%.vcf}_annotated_sorted.vcf.gz ${file2%.vcf}_annotated_sorted.vcf.gz -Ov -o merged_file.vcf || { echo -e "Failed to merge VCF files\n"; exit 1; }
+bcftools merge -m id ${file1%.vcf}_annotated_sorted.vcf.gz ${file2%.vcf}_annotated_sorted.vcf.gz -Ov -o merged_file.vcf || { echo -e "Failed to merge VCF files\n"; exit 1; }
 
 echo -e "VCF files merged.\n"
 
@@ -114,7 +127,9 @@ echo -e "VCF files merged.\n"
 num_ids_merged=$(awk '!/^#/ {print $3}' merged_file.vcf | sort | uniq | wc -l)
 num_rows_merged=$(awk '!/^#/ {print $3}' merged_file.vcf | wc -l)
 if [ $num_ids_merged -ne $num_rows_merged ]; then
+    echo -e "***************************************************"
     echo -e "Warning: IDs in the merged VCF file are not unique\n"
+    echo -e "***************************************************"
 fi
 
 echo -e "Checked for unique IDs in the merged VCF file.\n"
@@ -166,8 +181,23 @@ rm merged_file.vcf
 
 echo -e "Merged IDs annotated.\n"
 
+# Peep the fixed info of the vcf file
 awk '!/^##/ {print $1, $2, $3, $4, $5}' combined_alignment.vcf  | head
 
 echo
 
 echo -e "Script completed successfully.\n"
+
+# Get end time and report runtime
+end=$(date +%s)
+runtime=$((end-start))
+
+echo "Job ran in: $runtime seconds"
+
+# Convert the runtime to hours, minutes, and seconds
+hours=$((runtime / 3600))
+minutes=$(( (runtime % 3600) / 60))
+seconds=$((runtime % 60))
+
+echo "Job ran in: $hours hours $minutes minutes $seconds seconds"
+

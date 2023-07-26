@@ -139,7 +139,7 @@ echo -e "Calculated the number of unique loci in each input VCF file: File 1 = $
 # Count the number of loci in the merged VCF file
 num_loci_merged=$(bcftools view -H merged_file.vcf | wc -l) || { echo -e "Failed to count loci in merged VCF file\n"; exit 1; }
 
-echo -e "Counted the number of loci in the merged VCF file.\n"
+echo -e "Counted the number of loci in the merged VCF file: $num_loci_merged.\n"
 
 # Working on this . . .
 # Check that the number of loci in the merged file is as expected

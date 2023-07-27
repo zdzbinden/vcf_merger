@@ -104,8 +104,7 @@ bcftools sort ${file2%.vcf}_normed.vcf -Ov -o ${file2%.vcf}_annotated_sorted.vcf
 
 echo -e "VCF files sorted.\n"
 
-# Remove annotated VCF files after use
-rm ${file1%.vcf}_annotated.vcf ${file2%.vcf}_annotated.vcf ${file1%.vcf}_normed.vcf ${file2%.vcf}_normed.vcf || { echo -e "Failed to remove annotated VCF files\n"; exit 1; }
+
 
 # Compress and index the VCF files
 bgzip -c ${file1%.vcf}_annotated_sorted.vcf > ${file1%.vcf}_annotated_sorted.vcf.gz || { echo -e "Failed to compress sorted VCF file 1\n"; exit 1; }
@@ -115,8 +114,7 @@ tabix -p vcf ${file2%.vcf}_annotated_sorted.vcf.gz || { echo -e "Failed to index
 
 echo -e "VCF files compressed and indexed.\n"
 
-# Remove sorted VCF files after use
-rm ${file1%.vcf}_annotated_sorted.vcf ${file2%.vcf}_annotated_sorted.vcf || { echo -e "Failed to remove sorted VCF files\n"; exit 1; }
+
 
 # Merge the VCF files
 bcftools merge -m id ${file1%.vcf}_annotated_sorted.vcf.gz ${file2%.vcf}_annotated_sorted.vcf.gz -Ov -o merged_file.vcf || { echo -e "Failed to merge VCF files\n"; exit 1; }
@@ -135,40 +133,31 @@ fi
 echo -e "Checked for unique IDs in the merged VCF file.\n"
 
 # Count the number of loci in each input VCF file
-num_loci_file1=$(awk '!/^#/ {print $3}' ${file1%.vcf}_annotated_sorted.vcf.gz | wc -l) || { echo -e "Failed to count loci in VCF file 1\n"; exit 1; }
-num_loci_file2=$(awk '!/^#/ {print $3}' ${file2%.vcf}_annotated_sorted.vcf.gz | wc -l) || { echo -e "Failed to count loci in VCF file 2\n"; exit 1; }
+num_loci_file1=$(awk '!/^#/ {print $3}' ${file1%.vcf}_annotated_sorted.vcf | wc -l) || { echo -e "Failed to count loci in VCF file 1\n"; exit 1; }
+num_loci_file2=$(awk '!/^#/ {print $3}' ${file2%.vcf}_annotated_sorted.vcf | wc -l) || { echo -e "Failed to count loci in VCF file 2\n"; exit 1; }
 
 echo -e "Counted the number of loci in each input VCF file: File 1 = $num_loci_file1; File 2 = $num_loci_file2.\n"
 
 # Count the number of shared loci between the two input VCF files
-num_shared_loci=$(bcftools isec -n=2 ${file1%.vcf}_annotated_sorted.vcf.gz ${file2%.vcf}_annotated_sorted.vcf.gz | wc -l) || { echo -e "Failed to count shared loci between VCF files\n"; exit 1; }
+num_shared_loci=$(bcftools isec -n=2 -Ov ${file1%.vcf}_annotated_sorted.vcf.gz ${file2%.vcf}_annotated_sorted.vcf.gz | grep -v "^#" | wc -l) || { echo -e "Failed to count shared loci between VCF files\n"; exit 1; }
 
 echo -e "Counted the number of shared loci between the two input VCF files: $num_shared_loci.\n"
 
 # Calculate the number of unique loci in each input VCF file
-num_unique_loci_file1=$((num_loci_file1 - num_shared_loci))
-num_unique_loci_file2=$((num_loci_file2 - num_shared_loci))
+num_unique_loci_file1=$(bcftools isec -C -n-1 -w1 -Ov  ${file1%.vcf}_annotated_sorted.vcf.gz ${file2%.vcf}_annotated_sorted.vcf.gz | grep -v "^#" | wc -l) || { echo -e "Failed to count unique loci in File 1\n"; exit 1; }
+num_unique_loci_file2=$(bcftools isec -C -n-1 -w1 -Ov  ${file2%.vcf}_annotated_sorted.vcf.gz ${file1%.vcf}_annotated_sorted.vcf.gz | grep -v "^#" | wc -l) || { echo -e "Failed to count unique loci in File 2\n"; exit 1; }
 
 echo -e "Calculated the number of unique loci in each input VCF file: File 1 = $num_unique_loci_file1; File 2 = $num_unique_loci_file2.\n"
 
 # Count the number of loci in the merged VCF file
-num_loci_merged=$(bcftools view -H merged_file.vcf | wc -l) || { echo -e "Failed to count loci in merged VCF file\n"; exit 1; }
+num_loci_merged=$(cat merged_file.vcf | grep -v "^#" | wc -l) || { echo -e "Failed to count loci in merged VCF file\n"; exit 1; }
 
 echo -e "Counted the number of loci in the merged VCF file: $num_loci_merged.\n"
 
-# Working on this . . .
-# Check that the number of loci in the merged file is as expected
-#expected_num_loci=$((num_shared_loci + num_unique_loci_file1 + num_unique_loci_file2))
-#if [ $num_loci_merged -eq $expected_num_loci ]; then
-#    echo -e "The number of loci in the merged file is as expected: $num_loci_merged\n"
-#    echo -e "Number of loci in file 1: $num_loci_file1\n"
-#    echo -e "Number of loci in file 2: $num_loci_file2\n"
-#else
-#    echo -e "Warning: The number of loci in the merged file ($num_loci_merged) is not as expected ($expected_num_loci)\n"
-#fi
-
-#echo -e "Checked that the number of loci in the merged file is as expected.\n"
-
+# Remove annotated VCF files after use
+rm ${file1%.vcf}_annotated.vcf ${file2%.vcf}_annotated.vcf ${file1%.vcf}_normed.vcf ${file2%.vcf}_normed.vcf || { echo -e "Failed to remove annotated VCF files\n"; exit 1; }
+# Remove sorted VCF files after use
+rm ${file1%.vcf}_annotated_sorted.vcf ${file2%.vcf}_annotated_sorted.vcf || { echo -e "Failed to remove sorted VCF files\n"; exit 1; }
 # Clean up temporary files
 rm contigs.txt ${file1%.vcf}_original.hdr ${file1%.vcf}_final.hdr ${file2%.vcf}_original.hdr ${file2%.vcf}_final.hdr contigs.hdr || { echo -e "Failed to clean up temporary files\n"; exit 1; }
 rm ${file1%.vcf}_annotated_sorted.vcf.gz ${file1%.vcf}_annotated_sorted.vcf.gz.tbi ${file2%.vcf}_annotated_sorted.vcf.gz ${file2%.vcf}_annotated_sorted.vcf.gz.tbi || { echo -e "Failed to clean up temporary files\n"; exit 1; }

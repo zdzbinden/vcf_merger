@@ -139,7 +139,10 @@ num_loci_file2=$(awk '!/^#/ {print $3}' ${file2%.vcf}_annotated_sorted.vcf | wc 
 echo -e "Counted the number of loci in each input VCF file: File 1 = $num_loci_file1; File 2 = $num_loci_file2.\n"
 
 # Count the number of shared loci between the two input VCF files
-num_shared_loci=$(bcftools isec -n=2 -Ov ${file1%.vcf}_annotated_sorted.vcf.gz ${file2%.vcf}_annotated_sorted.vcf.gz | grep -v "^#" | wc -l) || { echo -e "Failed to count shared loci between VCF files\n"; exit 1; }
+bcftools isec -n=2 -Ov ${file1%.vcf}_annotated_sorted.vcf.gz ${file2%.vcf}_annotated_sorted.vcf.gz -w 1 > intersect.txt || { echo -e "Failed to count shared loci between VCF files\n"; exit 1; }
+
+# Calculate num_shared_loci by piping the temporary file into grep and wc
+num_shared_loci=$(grep -v "^#" intersect.txt | wc -l) || { echo -e "Failed to count shared loci between VCF files\n"; exit 1; }
 
 echo -e "Counted the number of shared loci between the two input VCF files: $num_shared_loci.\n"
 
@@ -169,6 +172,14 @@ bcftools annotate -Ov -I '%CHROM\_%POS' merged_file.vcf > combined_alignment.vcf
 rm merged_file.vcf
 
 echo -e "Merged IDs annotated.\n"
+
+
+# Create Intersection VCF
+bgzip -c combined_alignment.vcf > combined_alignment.vcf.gz || { echo -e "Failed to compress final file 1\n"; exit 1; }
+tabix -p vcf combined_alignment.vcf.gz || { echo -e "Failed to index final file 1\n"; exit 1; }
+# Extract shared loci from the merged VCF file
+bcftools view -R intersect.txt -Ov -o combined_intersection.vcf combined_alignment.vcf.gz
+
 
 # Peep the fixed info of the vcf file
 awk '!/^##/ {print $1, $2, $3, $4, $5}' combined_alignment.vcf  | head
